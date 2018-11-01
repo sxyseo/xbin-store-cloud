@@ -4,9 +4,9 @@ buildscript {
     }
     repositories {
         mavenLocal()
-        maven{
-            url 'http://localhost:8077/nexus/content/groups/public/'
-        }
+//        maven{
+//            url 'http://localhost:8077/nexus/content/groups/public/'
+//        }
     }
     dependencies {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
@@ -53,7 +53,8 @@ configure(allprojects) { project ->
     ext.beetl_starterVersion        = "0.0.3"
     ext.hutoolVersion               = "3.0.3"
     ext.swagger2Version             = "2.6.1"
-    ext.Version                     = "4.12"
+    ext.logbackkafkaVersion         = "0.1.0"
+    ext.apolloclientVersion         = "0.8.0"
 
     apply plugin: "java"
     apply plugin: 'idea'
@@ -82,7 +83,7 @@ configure(allprojects) { project ->
     if (!((name.contains('common')) || (name.contains('api'))  || (name == 'xbin-store-cloud'))) {
         task buildDocker(type: Docker, dependsOn: bootRepackage) {
             push = true
-            registry = "192.168.30.109:5000"
+            registry = dockerRegistry
             applicationName = jar.baseName
             dockerfile = file('Dockerfile')
             doFirst {
@@ -91,8 +92,11 @@ configure(allprojects) { project ->
                     into stageDir
                 }
             }
-
         }
+    }
+
+    if (name.contains('api')) {
+        tasks.remove(bootRepackage)
     }
 }
 
@@ -101,14 +105,23 @@ project("xbin-store-cloud-eureka") {
 
     dependencies {
         compile("org.springframework.cloud:spring-cloud-starter-eureka-server")
+        compile("com.github.danielwegener:logback-kafka-appender:${logbackkafkaVersion}")
     }
 }
-project("xbin-store-cloud-config") {
-    description = "xbin-store-cloud-config"
+//project("xbin-store-cloud-config") {
+//    description = "xbin-store-cloud-config"
+//
+//    dependencies {
+//        compile("org.springframework.cloud:spring-cloud-starter-eureka")
+//        compile("org.springframework.cloud:spring-cloud-config-server")
+//    }
+//}
+project("xbin-store-cloud-zuul") {
+    description = "xbin-store-cloud-zuul"
 
     dependencies {
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
-        compile("org.springframework.cloud:spring-cloud-config-server")
+        compile("org.springframework.cloud:spring-cloud-starter-zuul")
     }
 }
 project("xbin-store-cloud-turbine") {
@@ -138,6 +151,7 @@ project("xbin-store-cloud-admin") {
         compile("org.springframework.boot:spring-boot-starter-actuator")
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
     }
+
 }
 project("xbin-store-cloud-common") {
     description = "xbin-store-cloud-common"
@@ -204,7 +218,9 @@ project("xbin-store-cloud-service-admin") {
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("org.springframework.cloud:spring-cloud-starter-security")
+        compile("org.springframework.cloud:spring-cloud-starter-oauth2")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
     }
 
     bootRepackage {
@@ -219,7 +235,7 @@ project("xbin-store-cloud-web-admin") {
         compile(project(":xbin-store-cloud-service-admin-api"))
         compile("org.springframework.boot:spring-boot-starter-web")
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
@@ -249,7 +265,7 @@ project("xbin-store-cloud-service-search") {
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
         compile("org.springframework.data:spring-data-solr")
     }
 }
@@ -260,7 +276,7 @@ project("xbin-store-cloud-web-search") {
         compile(project(":xbin-store-cloud-service-search-api"))
         compile("org.springframework.boot:spring-boot-starter-web")
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
@@ -289,7 +305,7 @@ project("xbin-store-cloud-service-portal") {
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
 //        compile("org.springframework.data:spring-data-redis") //暂时不使用
         compile("cn.binux:spring-boot-starter-redis:${springBootRedisVersion}")
     }
@@ -301,7 +317,7 @@ project("xbin-store-cloud-web-portal") {
         compile(project(":xbin-store-cloud-service-portal-api"))
         compile("org.springframework.boot:spring-boot-starter-web")
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
@@ -330,7 +346,7 @@ project("xbin-store-cloud-service-item") {
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
 //        compile("org.springframework.data:spring-data-redis") //暂时不使用
         compile("cn.binux:spring-boot-starter-redis:${springBootRedisVersion}")
         compile("org.freemarker:freemarker:2.3.9")
@@ -343,7 +359,7 @@ project("xbin-store-cloud-web-item") {
         compile(project(":xbin-store-cloud-service-item-api"))
         compile("org.springframework.boot:spring-boot-starter-web")
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
@@ -373,7 +389,7 @@ project("xbin-store-cloud-service-cart") {
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
 //        compile("org.springframework.data:spring-data-redis") //暂时不使用
         compile("cn.binux:spring-boot-starter-redis:${springBootRedisVersion}")
         compile("org.freemarker:freemarker:2.3.9")
@@ -386,7 +402,7 @@ project("xbin-store-cloud-web-cart") {
         compile(project(":xbin-store-cloud-service-cart-api"))
         compile("org.springframework.boot:spring-boot-starter-web")
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
@@ -416,7 +432,7 @@ project("xbin-store-cloud-service-notify") {
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
 //        compile("org.springframework.data:spring-data-redis") //暂时不使用
         compile("cn.binux:spring-boot-starter-redis:${springBootRedisVersion}")
     }
@@ -440,7 +456,7 @@ project("xbin-store-cloud-service-sso") {
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
 //        compile("org.springframework.data:spring-data-redis") //暂时不使用
         compile("cn.binux:spring-boot-starter-redis:${springBootRedisVersion}")
         compile("org.freemarker:freemarker:2.3.9")
@@ -454,7 +470,7 @@ project("xbin-store-cloud-web-sso") {
         compile(project(":xbin-store-cloud-service-notify-api"))
         compile("org.springframework.boot:spring-boot-starter-web")
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
@@ -485,7 +501,7 @@ project("xbin-store-cloud-service-order") {
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
 //        compile("org.springframework.data:spring-data-redis") //暂时不使用
         compile("cn.binux:spring-boot-starter-redis:${springBootRedisVersion}")
         compile("org.freemarker:freemarker:2.3.9")
@@ -501,7 +517,7 @@ project("xbin-store-cloud-web-order") {
         compile(project(":xbin-store-cloud-service-cart-api"))
         compile("org.springframework.boot:spring-boot-starter-web")
         compile("org.springframework.cloud:spring-cloud-starter-eureka")
-        compile("org.springframework.cloud:spring-cloud-starter-config")
+        compile("com.ctrip.framework.apollo:apollo-client:${apolloclientVersion}")
         compile("org.springframework.cloud:spring-cloud-starter-hystrix")
         compile("org.springframework.cloud:spring-cloud-starter-bus-amqp")
         compile("org.springframework.cloud:spring-cloud-starter-zipkin")
